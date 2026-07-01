@@ -1,0 +1,23 @@
+# Playwright
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+allure-results/
+allure-report/
+reports/
+playwright/.cache/
+.auth/
+
+# Operating System Traces
+.DS_Store
+Thumbs.db
+
+# Environment Secrets & Credentials Context
+.env
+.env.local
+*.env
+
+# Build Artifacts
+dist/
+.eslintcache
