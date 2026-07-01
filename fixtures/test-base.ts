@@ -26,8 +26,8 @@ export const test = base.extend<MyFixtures>({
   // You can create brand new fixtures here too! (e.g., an authenticated session)
   authenticatedPage: async ({ page }, use) => {
     await page.goto('/login');
-    await page.fill('#user', 'admin');
-    await page.fill('#pass', 'secret');
+    await page.fill('#user', process.env.ADMIN_USER || '');
+    await page.fill('#pass', process.env.ADMIN_PASSWORD || '');
     await page.click('#submit');
 
     await use(page); // Passes the logged-in page to the test
