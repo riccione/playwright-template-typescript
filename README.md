@@ -104,6 +104,30 @@ npm install -g allure
 
 The suite is designed to change its reporting layout dynamically depending on the execution parameters passed down through the terminal command:
 
+### Quick Start with npm Scripts
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in specific browser
+npm run test:chromium
+npm run test:firefox
+npm run test:webkit
+
+# Open Playwright UI Mode for interactive testing
+npm run test:ui
+
+# Run tests in headed mode (visible browser)
+npm run test:headed
+
+# Debug tests with Playwright Inspector
+npm run test:debug
+
+# View the HTML report
+npm run test:report
+```
+
 ### Choice A: Generate Lightweight Playwright HTML Reports
 
 Creates a self-contained, lightweight `.html` build report folder with embedded trace files, logs, and failure videos.
