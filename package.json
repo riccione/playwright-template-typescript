@@ -1,8 +1,7 @@
 {
   "name": "playwright-template-typescript",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "End-to-end testing framework with Playwright, TypeScript, Page Object Model, and dual reporting",
   "scripts": {
     "test": "npx playwright test",
     "test:chromium": "npx playwright test --project=chromium",
@@ -16,9 +15,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,js,json,md}\""
   },
-  "keywords": [],
+  "keywords": ["playwright", "typescript", "e2e", "testing", "pom"],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
