@@ -41,7 +41,7 @@ test failures.
 │   ├── base.page.ts         # Core Page Object wrapper handling Playwright components
 │   └── login.page.ts        # Clean workflow extension decoupling logic from selectors
 └── tests/
-    ├── api/                 # [.gitkeep] Isolated backend API assertions folder
+    ├── api/                 # API test examples (request fixture, CRUD operations)
     ├── regression/          # [.gitkeep] Broad validation execution scripts
     ├── smoke/               # [.gitkeep] High priority critical path milestones
     └── ui/
@@ -141,6 +141,32 @@ test('verify login page', async ({ page, loginPage }) => {
   await loginPage.login('user', 'pass');
   expect(await loginPage.getErrorMessageText()).toContain('Invalid credentials');
 });
+```
+
+### API Testing
+
+Playwright's built-in `request` fixture enables HTTP API testing without a browser. API tests live in `tests/api/` and use the standard `@playwright/test` import:
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('GET request', async ({ request }) => {
+  const response = await request.get('https://api.example.com/users');
+  expect(response.status()).toBe(200);
+
+  const body = await response.json();
+  expect(Array.isArray(body)).toBeTruthy();
+});
+```
+
+Available request methods: `get`, `post`, `put`, `patch`, `delete`, `head`, `fetch`.
+
+```bash
+# Run only API tests
+npx playwright test tests/api/
+
+# Run API tests with a specific reporter
+npx playwright test tests/api/ --reporter=line
 ```
 
 ### Choice A: Generate Lightweight Playwright HTML Reports
