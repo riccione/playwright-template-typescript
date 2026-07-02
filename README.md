@@ -57,12 +57,14 @@ test failures.
 
 ### 1. Initialize Your Environment
 
-Make sure you have Node.js installed. Then, fetch dependency packages and set up your local development tooling:
+Make sure you have Node.js and Python 3 installed. Then, set up pre-commit, fetch dependencies, and configure development tooling:
 
 ```bash
-# Install pre-commit (requires Python/pip, or brew on macOS)
-pip install pre-commit
-# or: brew install pre-commit
+# Install pre-commit using uv (recommended)
+uv tool install pre-commit
+# or using pip in a virtual environment:
+# python3 -m venv .venv && source .venv/bin/activate
+# pip install pre-commit
 
 # Clean install package specifications out of package.json
 npm install
