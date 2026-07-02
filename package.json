@@ -12,8 +12,10 @@
     "test:debug": "npx playwright test --debug",
     "test:report": "npx playwright show-report reports",
     "lint": "eslint .",
+    "lint:check": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"**/*.{ts,js,json,md}\""
+    "format": "prettier --write \"**/*.{ts,js,json,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,yml,yaml}\""
   },
   "keywords": ["playwright", "typescript", "e2e", "testing", "pom"],
   "author": "",
