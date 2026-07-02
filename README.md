@@ -57,17 +57,21 @@ test failures.
 
 ### 1. Initialize Your Environment
 
-Make sure you have Node.js installed. Then, fetch dependency packages and set up your local development linting tools:
+Make sure you have Node.js installed. Then, fetch dependency packages and set up your local development tooling:
 
 ```bash
+# Install pre-commit (requires Python/pip, or brew on macOS)
+pip install pre-commit
+# or: brew install pre-commit
+
 # Clean install package specifications out of package.json
 npm install
 
 # Install native Playwright system browser binaries
 npx playwright install --with-deps
 
-# Bind local pre-commit hooks to your git lifecycle hooks context
-npm run prepare # if using husky or pre-commit wrappers
+# Install pre-commit git hooks (runs automatically on npm install)
+npm run prepare
 
 ```
 
@@ -226,10 +230,17 @@ npm run format
 
 ### Pre-commit Hooks
 
-If you have `pre-commit` installed, linting and formatting run automatically on `git commit`. Install the hooks:
+Pre-commit runs ESLint and Prettier automatically on every `git commit`. Hooks are installed via the `prepare` script after `npm install`:
 
 ```bash
+# Install hooks (already runs on npm install)
 pre-commit install
+
+# Manually run hooks against all files
+pre-commit run --all-files
+
+# Skip hooks on a specific commit (use with caution)
+git commit --no-verify
 ```
 
 ---
