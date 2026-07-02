@@ -264,6 +264,39 @@ _Note: `video: 'retain-on-failure'` guarantees videos are safely discarded for p
 
 ---
 
+## TypeScript Configuration (`tsconfig.json`)
+
+Path aliases enable clean imports without relative path chains:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@fixtures/*": ["fixtures/*"],
+      "@pages/*": ["pages/*"],
+      "@tests/*": ["tests/*"]
+    }
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist", "allure-results", "allure-report", "reports", "test-results"]
+}
+```
+
+| Option | Value | Purpose |
+|--------|-------|---------|
+| `target` | `ES2022` | Modern JS output with async/await, class fields |
+| `module` | `commonjs` | Node.js compatible module system |
+| `strict` | `true` | Full type checking — catch nulls, anys, and edge cases |
+| `esModuleInterop` | `true` | Smooth default imports from CommonJS packages |
+| `paths` | `@fixtures/*`, `@pages/*`, `@tests/*` | Clean imports like `@fixtures/test-base` |
+
+---
+
 ## Handling Intentional Failures & WIP Tests
 
 To keep the continuous integration (CI) pipeline green while tracking unfinished features or known application bugs, use Playwright’s native test annotations:
