@@ -3,6 +3,8 @@ pipeline {
 
     environment {
         CI = 'true'
+        PLAYWRIGHT_BROWSERS_PATH = "${WORKSPACE}/.playwright-cache"
+        NPM_CONFIG_CACHE = "${WORKSPACE}/.npm-cache"
     }
 
     options {
@@ -13,7 +15,7 @@ pipeline {
     stages {
         stage('Install Dependencies') {
             steps {
-                sh 'npm ci'
+                sh 'npm ci --prefer-offline'
             }
         }
 
@@ -40,11 +42,17 @@ pipeline {
                 sh 'npx playwright test'
             }
         }
+
+        stage('Generate Allure Report') {
+            steps {
+                sh 'npx allure generate allure-results --clean -o allure-report'
+            }
+        }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: 'reports/**, allure-results/**', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'reports/**, allure-results/**, allure-report/**', allowEmptyArchive: true
             cleanWs()
         }
         failure {
