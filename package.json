@@ -33,7 +33,6 @@
     "typescript-eslint": "^8.62.0"
   },
   "dependencies": {
-    "allure": "^3.13.2",
     "dotenv": "^17.4.2"
   }
 }
