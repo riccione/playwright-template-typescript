@@ -128,6 +128,21 @@ npm run test:debug
 npm run test:report
 ```
 
+### Writing Tests
+
+All tests should import `test` and `expect` from `@fixtures/test-base` to inherit the custom fixtures (auto-navigation, cleanup, page objects):
+
+```typescript
+import { test, expect } from '@fixtures/test-base';
+import { LoginPage } from '@pages/login.page';
+
+test('verify login page', async ({ page, loginPage }) => {
+  await page.goto('/login');
+  await loginPage.login('user', 'pass');
+  expect(await loginPage.getErrorMessageText()).toContain('Invalid credentials');
+});
+```
+
 ### Choice A: Generate Lightweight Playwright HTML Reports
 
 Creates a self-contained, lightweight `.html` build report folder with embedded trace files, logs, and failure videos.
