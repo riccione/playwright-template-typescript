@@ -1,10 +1,11 @@
 image: mcr.microsoft.com/playwright:v1.52.0-noble
 
 stages:
+  - quality
   - test
 
 variables:
-  CI: "true"
+  CI: 'true'
 
 cache:
   key:
@@ -27,6 +28,17 @@ playwright:
       - reports/
       - allure-results/
     expire_in: 30 days
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+quality:
+  stage: quality
+  before_script:
+    - npm ci --cache .npm
+  script:
+    - npm run lint:check
+    - npm run format:check
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"

@@ -152,6 +152,47 @@ allure serve allure-results
 
 ---
 
+## Code Quality & Formatting
+
+The project enforces consistent code style using ESLint for linting and Prettier for formatting. These checks run automatically in CI and block merges on violations.
+
+### Linting
+
+```bash
+# Check for lint errors
+npm run lint:check
+
+# Auto-fix lint errors
+npm run lint:fix
+```
+
+### Formatting
+
+```bash
+# Check formatting (read-only, fails if unformatted)
+npm run format:check
+
+# Auto-format all files
+npm run format
+```
+
+### What Gets Checked
+
+| Tool | Files | Exclusions |
+|------|-------|------------|
+| ESLint | `*.ts`, `*.js` | `*.md` |
+| Prettier | `*.ts`, `*.js`, `*.json`, `*.yml`, `*.yaml` | `*.md`, `package-lock.json`, generated dirs |
+
+### Pre-commit Hooks
+
+If you have `pre-commit` installed, linting and formatting run automatically on `git commit`. Install the hooks:
+
+```bash
+pre-commit install
+```
+
+---
+
 ## Useful Playwright Command Line Flags
 
 When executing `npx playwright test`, you can append these optional flags to control output verbosity, configuration targets, or debugging parameters:

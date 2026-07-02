@@ -17,6 +17,18 @@ pipeline {
             }
         }
 
+        stage('Lint') {
+            steps {
+                sh 'npm run lint:check'
+            }
+        }
+
+        stage('Format Check') {
+            steps {
+                sh 'npm run format:check'
+            }
+        }
+
         stage('Install Browsers') {
             steps {
                 sh 'npx playwright install --with-deps'

@@ -4,6 +4,9 @@ import playwright from "eslint-plugin-playwright";
 import eslintConfigPrettier from "eslint-config-prettier";
 
 export default tseslint.config(
+  {
+    ignores: ['*.md'],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
