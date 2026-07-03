@@ -19,6 +19,7 @@ test failures.
 - **Dynamic Dual Reporting**: Built-in compatibility for choosing lightweight native `playwright-html` tracking or fully enterprise-grade `Allure 3` visual dashboards.
 - **Rich Failure Artifacts**: Automated hook interception captures full-page browser screenshots and saves screen recordings explicitly on test failure conditions.
 - **Universal CI/CD Ready**: Native multi-platform workflow blueprints provided out-of-the-box for GitHub Actions, GitLab CI, and Jenkins.
+- **Containerized Execution**: Docker and Docker Compose support for reproducible test runs across any environment.
 
 ---
 
@@ -30,6 +31,8 @@ test failures.
 ├── .env.example             # Safe template for tracking configuration variables
 ├── .gitignore               # Strict untracked execution pattern matching
 ├── .pre-commit-config.yaml  # Intercepts git loops to enforce styling gates
+├── Dockerfile               # Containerized test runner image
+├── docker-compose.yml       # Docker Compose orchestration for local runs
 ├── Jenkinsfile              # Jenkins Declarative pipeline engine script
 ├── LICENSE                  # MIT License agreement
 ├── playwright.config.ts     # Root-level configuration file for execution flags
@@ -196,6 +199,34 @@ npx playwright test --reporter=line,allure-playwright
 allure serve allure-results
 
 ```
+
+---
+
+## Docker Execution
+
+Run tests in a fully isolated container with pre-installed browsers and system dependencies.
+
+### Prerequisites
+
+Install Docker and Docker Compose on your machine.
+
+### Build and Run
+
+```bash
+# Build the image and run tests
+docker compose up --build
+
+# Run tests with a specific npm script
+docker compose run --rm playwright npx playwright test --headed
+
+# Run tests in UI mode (requires X11 forwarding on Linux)
+docker compose run --rm playwright npx playwright test --ui
+
+# View the HTML report (generated in reports/)
+open reports/index.html
+```
+
+The container uses `mcr.microsoft.com/playwright` as its base image, which ships with Chromium, Firefox, and WebKit — no manual browser installs needed.
 
 ---
 
