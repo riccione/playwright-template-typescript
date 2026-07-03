@@ -35,7 +35,7 @@ playwright:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   except:
     changes:
-      - "**.md"
+      - '**.md'
       - LICENSE
 
 quality:
@@ -50,5 +50,5 @@ quality:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   except:
     changes:
-      - "**.md"
+      - '**.md'
       - LICENSE
