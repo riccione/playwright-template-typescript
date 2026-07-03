@@ -1,0 +1,12 @@
+services:
+  playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./reports:/app/reports
+      - ./allure-results:/app/allure-results
+      - ./test-results:/app/test-results
+      - ./.env:/app/.env:ro
+    environment:
+      - CI=true
