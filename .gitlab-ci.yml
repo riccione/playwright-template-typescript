@@ -33,6 +33,10 @@ playwright:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  except:
+    changes:
+      - "**.md"
+      - LICENSE
 
 quality:
   stage: quality
@@ -44,3 +48,7 @@ quality:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  except:
+    changes:
+      - "**.md"
+      - LICENSE
