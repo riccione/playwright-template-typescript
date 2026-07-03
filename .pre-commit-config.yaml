@@ -3,15 +3,15 @@ repos:
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
-        types_or: [ts, js, json, markdown]
+        types_or: [ts, js, json, yml, yaml]
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.0.0
+    rev: v10.6.0
     hooks:
       - id: eslint
         files: \.[jt]sx?$
         types: [file]
         additional_dependencies:
-          - eslint@^9.0.0
-          - typescript-eslint@^8.0.0
-          - eslint-plugin-playwright@^1.0.0
+          - eslint@^10.6.0
+          - typescript-eslint@^8.62.0
+          - eslint-plugin-playwright@^2.10.4
