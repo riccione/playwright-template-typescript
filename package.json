@@ -27,7 +27,7 @@
   ],
   "author": "",
   "license": "MIT",
-  "type": "commonjs",
+  "type": "module",
   "engines": {
     "node": ">=22"
   },
