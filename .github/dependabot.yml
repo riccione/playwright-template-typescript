@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    groups:
+      # Keep the runner and the report toolchain moving together so the
+      # Docker image tag (mcr.microsoft.com/playwright) stays meaningful.
+      playwright:
+        patterns:
+          - '@playwright/*'
+          - 'allure-playwright'
+          - 'allure-commandline'
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
