@@ -1,7 +1,8 @@
 import { Page, Locator } from '@playwright/test';
-import { BasePage } from './base.page';
 
-export class LoginPage extends BasePage {
+export class LoginPage {
+  private readonly page: Page;
+
   // Define strongly typed properties for your selectors
   private readonly usernameInput: Locator;
   private readonly passwordInput: Locator;
@@ -9,8 +10,7 @@ export class LoginPage extends BasePage {
   private readonly errorMessage: Locator;
 
   constructor(page: Page) {
-    // Pass the page context up to the parent BasePage class
-    super(page);
+    this.page = page;
 
     // Initialize locators using modern, resilient user-facing locators
     this.usernameInput = page.getByPlaceholder('Enter Username');
@@ -20,12 +20,18 @@ export class LoginPage extends BasePage {
   }
 
   /**
+   * Navigates to the login page relative to the config's baseURL.
+   */
+  async goto(path: string = '/login'): Promise<void> {
+    await this.page.goto(path);
+  }
+
+  /**
    * High-level workflow wrapping the granular text inputs and click actions
    */
   async login(username: string, password: string): Promise<void> {
-    console.log(`[Workflow] Attempting login for user: ${username}`);
-    await this.safeFill(this.usernameInput, username);
-    await this.safeFill(this.passwordInput, password);
+    await this.usernameInput.fill(username);
+    await this.passwordInput.fill(password);
     await this.loginButton.click();
   }
 
