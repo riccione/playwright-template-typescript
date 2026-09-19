@@ -28,17 +28,21 @@
   "author": "",
   "license": "MIT",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "1.61.1",
     "@types/node": "^26.0.1",
     "allure-commandline": "^2.43.0",
-    "allure-playwright": "^3.10.2",
+    "allure-playwright": "3.10.2",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-playwright": "^2.10.4",
     "globals": "^17.7.0",
     "prettier": "^3.9.1",
+    "typescript": "5.9.3",
     "typescript-eslint": "^8.62.0"
   },
   "dependencies": {
