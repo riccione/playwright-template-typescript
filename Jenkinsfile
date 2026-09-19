@@ -31,6 +31,12 @@ pipeline {
             }
         }
 
+        stage('Typecheck') {
+            steps {
+                sh 'npm run typecheck'
+            }
+        }
+
         stage('Install Browsers') {
             steps {
                 sh 'npx playwright install --with-deps'
@@ -43,6 +49,12 @@ pipeline {
             }
         }
 
+        stage('Merge Playwright Reports') {
+            steps {
+                sh 'npx playwright merge-reports --reporter html ./blob-report'
+            }
+        }
+
         stage('Generate Allure Report') {
             steps {
                 sh 'npx allure generate allure-results --clean -o allure-report'
@@ -52,7 +64,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'reports/**, allure-results/**, allure-report/**', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'playwright-report/**, allure-results/**, allure-report/**', allowEmptyArchive: true
             cleanWs()
         }
         failure {

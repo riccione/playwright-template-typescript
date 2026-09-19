@@ -10,60 +10,95 @@ on:
     paths-ignore:
       - '**.md'
       - 'LICENSE'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
-    timeout-minutes: 60
+  quality:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
-      - name: Cache node_modules
-        id: npm-cache
-        uses: actions/cache@v6
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install dependencies
-        if: steps.npm-cache.outputs.cache-hit != 'true'
-        run: npm ci
-
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
       - name: Lint
         run: npm run lint:check
-
       - name: Format check
         run: npm run format:check
+      - name: Typecheck
+        run: npm run typecheck
 
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v6
+  test:
+    needs: quality
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
-
       - name: Run Playwright tests
-        run: npx playwright test
-
-      - name: Generate Allure Report
-        if: ${{ !cancelled() }}
-        run: npx allure generate allure-results --clean -o allure-report
+        run: npx playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }}
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
-          path: reports/
-          retention-days: 30
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 7
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
+        with:
+          name: allure-results-${{ matrix.shard }}
+          path: allure-results/
+          retention-days: 7
+
+  report:
+    needs: test
+    if: ${{ !cancelled() && needs.test.result == 'success' }}
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Download blob reports
+        uses: actions/download-artifact@v8
+        with:
+          pattern: blob-report-*
+          path: blob-report
+          merge-multiple: true
+      - name: Download Allure results
+        uses: actions/download-artifact@v8
+        with:
+          pattern: allure-results-*
+          path: allure-results
+          merge-multiple: true
+      - name: Merge Playwright reports
+        run: npx playwright merge-reports --reporter html ./blob-report
+      - name: Generate Allure report
+        run: npx allure generate allure-results --clean -o allure-report
+      - uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+      - uses: actions/upload-artifact@v7
         with:
           name: allure-report
           path: allure-report/

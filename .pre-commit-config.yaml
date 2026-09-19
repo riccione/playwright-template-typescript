@@ -1,17 +1,26 @@
 repos:
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
+  # Run the tools straight from the repo's own node_modules so the hooks
+  # always use the same versions and config as CI (no isolated, duplicated
+  # dependency pins to drift).
+  - repo: local
     hooks:
       - id: prettier
-        types_or: [ts, js, json, yml, yaml]
+        name: prettier
+        entry: npx prettier --write
+        language: system
+        types_or: [ts, javascript, json, yaml]
+        exclude: ^(package-lock\.json$|reports/|allure-results/|allure-report/|test-results/)
 
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v10.6.0
-    hooks:
       - id: eslint
-        files: \.[jt]sx?$
-        types: [file]
-        additional_dependencies:
-          - eslint@^10.6.0
-          - typescript-eslint@^8.62.0
-          - eslint-plugin-playwright@^2.10.4
+        name: eslint
+        entry: npx eslint --fix --max-warnings=0
+        language: system
+        files: \.[cm]?[jt]sx?$
+        exclude: ^reports/
+
+      - id: typecheck
+        name: tsc --noEmit
+        entry: npx tsc --noEmit
+        language: system
+        files: \.tsx?$
+        pass_filenames: false
