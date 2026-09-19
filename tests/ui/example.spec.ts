@@ -1,18 +1,19 @@
 import { test, expect } from '@fixtures/test-base';
 
-test('has title', async ({ page }) => {
+/**
+ * Intro examples: plain `page` usage, no page objects.
+ * For larger suites prefer the POM pattern shown in login.spec.ts.
+ */
+test('sign-in page renders @smoke', async ({ page }) => {
   await page.goto('/');
 
-  // Expect a title "to contain" a substring.
-  await expect(page).toHaveTitle(/Playwright/);
+  await expect(page).toHaveTitle(/Sign in/);
 });
 
-test('get started link', async ({ page }) => {
+test('empty credentials are rejected @smoke', async ({ page }) => {
   await page.goto('/');
 
-  // Click the get started link.
-  await page.getByRole('link', { name: 'Get started' }).click();
+  await page.getByRole('button', { name: 'Log In' }).click();
 
-  // Expects page to have a heading with the name of Installation.
-  await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveText('Invalid credentials');
 });
