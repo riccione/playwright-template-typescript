@@ -1,18 +1,27 @@
-import { test as setup } from '@playwright/test';
+import { mkdirSync } from 'fs';
+import { dirname } from 'path';
+import { test as setup, expect } from '@playwright/test';
+import { LoginPage } from '@pages/login.page';
+import { DashboardPage } from '@pages/dashboard.page';
+import { AUTH_FILE, demoCredentials } from '@tests/credentials';
 
 /**
- * Setup project: runs once before all browser projects that depend on it.
- * TODO: perform the login flow here and persist the session with
- * `await page.context().storageState({ path: '.auth/user.json' })`
- * so tests can start authenticated via storageState instead of re-logging in.
+ * Runs once before all projects that depend on it. Performs the UI login
+ * a single time and persists the session, so authenticated specs can boot
+ * straight into the app via storageState instead of re-typing credentials.
  */
-setup('environment check', async ({}, testInfo) => {
-  const missing = ['BASE_URL', 'ADMIN_USER', 'ADMIN_PASSWORD'].filter((key) => !process.env[key]);
+setup('authenticate', async ({ page }) => {
+  mkdirSync(dirname(AUTH_FILE), { recursive: true });
 
-  if (missing.length) {
-    testInfo.annotations.push({
-      type: 'warning',
-      description: `Missing env vars (${missing.join(', ')}); copy .env.example to .env. Defaults are in use.`,
-    });
-  }
+  const loginPage = new LoginPage(page);
+  const dashboardPage = new DashboardPage(page);
+  const { username, password } = demoCredentials();
+
+  await loginPage.goto();
+  await loginPage.login(username, password);
+
+  // Fail the whole run early (and loudly) if the session was never established
+  await expect(dashboardPage.status).toHaveText(/Welcome, /);
+
+  await page.context().storageState({ path: AUTH_FILE });
 });
