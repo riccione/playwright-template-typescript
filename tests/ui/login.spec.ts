@@ -1,13 +1,26 @@
-/* eslint-disable playwright/no-skipped-test */
 import { test, expect } from '@fixtures/test-base';
+import { demoCredentials } from '@tests/credentials';
 
-test.skip('verify invalid login triggers error banner', async ({ loginPage }) => {
-  await loginPage.goto('/login');
-  await loginPage.login('wrong_user', 'bad_password');
+const { username, password } = demoCredentials();
 
-  // Await the string from the page object first
-  const errorMessage = await loginPage.getErrorMessageText();
+test('valid login reaches the dashboard @smoke', async ({ dashboardPage, loginPage }) => {
+  await loginPage.goto();
+  await loginPage.login(username, password);
 
-  // Pass it synchronously into expect (no await at the front)
-  expect(errorMessage).toContain('Invalid credentials');
+  await expect(dashboardPage.status).toHaveText(/Welcome, /);
+});
+
+test('invalid login shows error banner @regression', async ({ loginPage }) => {
+  await loginPage.goto();
+  await loginPage.login(username, 'totally-wrong');
+
+  await expect(loginPage.alert).toHaveText('Invalid credentials');
+});
+
+test('anonymous visitors are told they are not signed in @regression', async ({
+  dashboardPage,
+}) => {
+  await dashboardPage.goto();
+
+  await expect(dashboardPage.status).toHaveText('Not signed in');
 });
