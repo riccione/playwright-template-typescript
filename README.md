@@ -41,7 +41,6 @@ test failures.
 ├── fixtures/
 │   └── test-base.ts         # Custom fixtures providing encapsulated page instances
 ├── pages/
-│   ├── base.page.ts         # Core Page Object wrapper handling Playwright components
 │   └── login.page.ts        # Clean workflow extension decoupling logic from selectors
 └── tests/
     ├── api/                 # API test examples (request fixture, CRUD operations)
