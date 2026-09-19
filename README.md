@@ -28,30 +28,33 @@ test failures.
 ```text
 ├── .github/workflows/playwright.yml # GitHub Actions pipeline blueprint
 ├── .gitlab-ci.yml           # GitLab CI orchestration blueprint
-├── .env.example             # Safe template for tracking configuration variables
-├── .gitignore               # Strict untracked execution pattern matching
-├── .pre-commit-config.yaml  # Intercepts git loops to enforce styling gates
+├── Jenkinsfile              # Jenkins Declarative pipeline engine script
+├── .env.example             # Safe template for configuration variables
+├── .nvmrc                   # Pinned Node version for nvm/CI parity
+├── .pre-commit-config.yaml  # Local quality gates on commit
 ├── Dockerfile               # Containerized test runner image
 ├── docker-compose.yml       # Docker Compose orchestration for local runs
-├── Jenkinsfile              # Jenkins Declarative pipeline engine script
-├── LICENSE                  # MIT License agreement
-├── playwright.config.ts     # Root-level configuration file for execution flags
-├── tsconfig.json            # Base path aliases and compiler configuration paths
-├── package.json             # Project definitions and package dependencies
+├── playwright.config.ts     # Projects, reporters, webServer, timeouts
+├── tsconfig.json            # ESM + path aliases (@pages, @fixtures, @tests)
+├── package.json             # Scripts and exact-pinned dependencies
+├── demo-app/                # Local server the examples run against (offline)
+│   ├── server.mjs           # Zero-dep HTTP server: /login, /me, /logout
+│   ├── login.html           # Semantic sign-in form (labels, role=alert)
+│   └── dashboard.html       # Session-aware page (renders "Welcome"/"Not signed in")
 ├── fixtures/
-│   └── test-base.ts         # Custom fixtures providing encapsulated page instances
+│   └── test-base.ts         # Extends base `test` with page-object fixtures
 ├── pages/
-│   └── login.page.ts        # Clean workflow extension decoupling logic from selectors
+│   ├── login.page.ts        # LoginPage POM: public accessibility locators
+│   └── dashboard.page.ts    # DashboardPage POM
 └── tests/
-    ├── auth.setup.ts        # Setup project: runs before browser projects
-    ├── api/                 # API test examples (request fixture, CRUD operations)
-    ├── regression/          # [.gitkeep] Broad validation execution scripts
-    ├── smoke/               # [.gitkeep] High priority critical path milestones
+    ├── auth.setup.ts        # Setup project: logs in once, saves storageState
+    ├── credentials.ts       # Shared auth file path + credential resolution
+    ├── api/                 # request-fixture tests (own `api` project)
+    │   └── example.spec.ts
     └── ui/
-        ├── example.spec.ts   # Basic Playwright example tests
-        ├── example1.spec.ts  # Homepage title verification test
-        └── login.spec.ts     # UI test suites and regression scripts
-
+        ├── example.spec.ts               # Plain `page` intro examples
+        ├── login.spec.ts                 # POM workflow (@smoke / @regression)
+        └── dashboard.authenticated.spec.ts # Pre-logged-in via storageState
 ```
 
 ---
@@ -92,12 +95,18 @@ cp .env.example .env
 Open your newly created `.env` file and customize your workspace targets securely:
 
 ```ini
-BASE_URL=https://playwright.dev/
+BASE_URL=http://localhost:3000
 API_BASE_URL=https://jsonplaceholder.typicode.com
-ADMIN_USER=your_private_username
-ADMIN_PASSWORD=your_private_password
+# Optional: demo app credentials. Leave unset to use demo_admin/demo_password.
+ADMIN_USER=
+ADMIN_PASSWORD=
 
 ```
+
+Out of the box the suite runs entirely against the bundled `demo-app/`
+(started automatically via `webServer`), so no `.env` is even required for a
+first green run. Point `BASE_URL` at your own app once you swap the examples
+out — just keep the demo server config in `playwright.config.ts` or delete it.
 
 ### 3. (Optional) Allure 3 Dashboard Engine
 
@@ -150,28 +159,47 @@ npm run typecheck
 
 ### Writing Tests
 
-All tests should import `test` and `expect` from `@fixtures/test-base` to inherit the custom fixtures (auto-navigation, cleanup, page objects):
+All tests should import `test` and `expect` from `@fixtures/test-base` to get the page-object fixtures:
 
 ```typescript
 import { test, expect } from '@fixtures/test-base';
-import { LoginPage } from '@pages/login.page';
 
-test('verify login page', async ({ page, loginPage }) => {
-  await page.goto('/login');
-  await loginPage.login('user', 'pass');
-  expect(await loginPage.getErrorMessageText()).toContain('Invalid credentials');
+test('invalid login shows error banner @regression', async ({ loginPage }) => {
+  await loginPage.goto();
+  await loginPage.login('user', 'wrong-password');
+
+  await expect(loginPage.alert).toHaveText('Invalid credentials');
+});
+```
+
+Page objects expose their locators publicly so assertions stay web-first
+(auto-retrying) — `expect(loginPage.alert).toHaveText(...)`, never
+`expect(await loginPage.getText()).toContain(...)`.
+
+### Authentication / Sessions
+
+Logging in once is handled by the `setup` project (`tests/auth.setup.ts`),
+which stores the session in `.auth/user.json`. Specs named
+`*.authenticated.spec.ts` run in the `authenticated` project and boot
+pre-logged-in via `storageState` — no login step, no re-auth per test:
+
+```typescript
+// tests/ui/dashboard.authenticated.spec.ts
+test('saved session opens the dashboard', async ({ dashboardPage }) => {
+  await dashboardPage.goto(); // already signed in
+  await expect(dashboardPage.status).toHaveText(/Welcome, /);
 });
 ```
 
 ### API Testing
 
-Playwright's built-in `request` fixture enables HTTP API testing without a browser. API tests live in `tests/api/` and use the standard `@playwright/test` import:
+Playwright's built-in `request` fixture enables HTTP API testing without a browser. API tests live in `tests/api/` and run in the dedicated `api` project (own `API_BASE_URL`, zero browsers, once instead of per-browser):
 
 ```typescript
 import { test, expect } from '@playwright/test';
 
 test('GET request', async ({ request }) => {
-  const response = await request.get('https://api.example.com/users');
+  const response = await request.get('/users');
   expect(response.status()).toBe(200);
 
   const body = await response.json();
@@ -183,10 +211,7 @@ Available request methods: `get`, `post`, `put`, `patch`, `delete`, `head`, `fet
 
 ```bash
 # Run only API tests
-npx playwright test tests/api/
-
-# Run API tests with a specific reporter
-npx playwright test tests/api/ --reporter=line
+npm run test:api
 ```
 
 ### Choice A: Generate Lightweight Playwright HTML Reports
@@ -342,7 +367,7 @@ export default defineConfig({
   reporter: /* ... */,
 
   use: {
-    baseURL: process.env.BASE_URL || 'https://playwright.dev/',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     actionTimeout: 15_000,
     navigationTimeout: 15_000,
     trace: 'on-first-retry',
@@ -352,16 +377,18 @@ export default defineConfig({
 
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, dependencies: ['setup'], testIgnore: '**/api/**' },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, dependencies: ['setup'], testIgnore: '**/api/**' },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] }, dependencies: ['setup'], testIgnore: '**/api/**' },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, dependencies: ['setup'], testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'] },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, dependencies: ['setup'], testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'] },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, dependencies: ['setup'], testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'] },
+    { name: 'authenticated', testMatch: /.*\.authenticated\.spec\.ts/, use: { ...devices['Desktop Chrome'], storageState: AUTH_FILE }, dependencies: ['setup'] },
     { name: 'api', testDir: './tests/api', use: { baseURL: process.env.API_BASE_URL } },
   ],
 });
 ```
 
-_Browser projects depend on the `setup` project, and API tests run exactly once
-(no browser, own `API_BASE_URL`) instead of three times per browser._
+_Browser projects depend on the `setup` project and ignore `tests/api/`;
+`*.authenticated.spec.ts` files run pre-logged-in via `storageState`; API tests
+run exactly once (no browser, own `API_BASE_URL`) instead of per-browser._
 
 _Note: `video: 'retain-on-failure'` guarantees videos are safely discarded for passing tests, preserving local storage._
 
@@ -415,9 +442,10 @@ The cleanest engineering practice for tracking known open bugs. It instructs Pla
 - If the bug gets fixed and the test suddenly **passes**, Playwright flags it as a failure so you know to remove the annotation.
 
 ```typescript
-test.fail('verify broken mobile submit action', async ({ page }) => {
-  await page.goto('/login');
-  await page.click('#submit-mobile'); // Assertion failure here won't break CI
+test('verify broken mobile submit action', async ({ page }) => {
+  test.fail(true, 'app bug #123 — flip to false once fixed');
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Log In' }).click(); // fails as expected; CI stays green
 });
 ```
 
