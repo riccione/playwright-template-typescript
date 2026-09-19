@@ -43,6 +43,7 @@ test failures.
 ├── pages/
 │   └── login.page.ts        # Clean workflow extension decoupling logic from selectors
 └── tests/
+    ├── auth.setup.ts        # Setup project: runs before browser projects
     ├── api/                 # API test examples (request fixture, CRUD operations)
     ├── regression/          # [.gitkeep] Broad validation execution scripts
     ├── smoke/               # [.gitkeep] High priority critical path milestones
@@ -92,6 +93,7 @@ Open your newly created `.env` file and customize your workspace targets securel
 
 ```ini
 BASE_URL=https://playwright.dev/
+API_BASE_URL=https://jsonplaceholder.typicode.com
 ADMIN_USER=your_private_username
 ADMIN_PASSWORD=your_private_password
 
@@ -123,6 +125,13 @@ npm run test:chromium
 npm run test:firefox
 npm run test:webkit
 
+# Run API (headless, no browser) tests
+npm run test:api
+
+# Run tagged subsets
+npm run test:smoke       # --grep @smoke
+npm run test:regression  # --grep @regression
+
 # Open Playwright UI Mode for interactive testing
 npm run test:ui
 
@@ -134,6 +143,9 @@ npm run test:debug
 
 # View the HTML report
 npm run test:report
+
+# Static type check (also runs in CI and pre-commit)
+npm run typecheck
 ```
 
 ### Writing Tests
@@ -257,8 +269,8 @@ npm run format
 
 | Tool | Files | Exclusions |
 |------|-------|------------|
-| ESLint | `*.ts`, `*.js` | `*.md` |
-| Prettier | `*.ts`, `*.js`, `*.json`, `*.yml`, `*.yaml` | `*.md`, `package-lock.json`, generated dirs |
+| ESLint | `*.ts`, `*.js`, `*.mjs`, `*.cjs` | `*.md` |
+| Prettier | `*.ts`, `*.js`, `*.mjs`, `*.cjs`, `*.json`, `*.yml`, `*.yaml` | `*.md`, `package-lock.json`, generated dirs |
 
 ### Pre-commit Hooks
 
@@ -323,26 +335,33 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['html', { outputFolder: 'reports', open: 'never' }],
-    ['allure-playwright', { detail: true, outputFolder: 'allure-results' }],
-  ],
+  workers: process.env.CI ? '50%' : undefined,
+
+  // Locally: html + allure. On CI: blob + allure, so shards are merged
+  // back into one report by the pipeline (see .github/workflows).
+  reporter: /* ... */,
 
   use: {
     baseURL: process.env.BASE_URL || 'https://playwright.dev/',
+    actionTimeout: 15_000,
+    navigationTimeout: 15_000,
     trace: 'on-first-retry',
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, dependencies: ['setup'], testIgnore: '**/api/**' },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, dependencies: ['setup'], testIgnore: '**/api/**' },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, dependencies: ['setup'], testIgnore: '**/api/**' },
+    { name: 'api', testDir: './tests/api', use: { baseURL: process.env.API_BASE_URL } },
   ],
 });
 ```
+
+_Browser projects depend on the `setup` project, and API tests run exactly once
+(no browser, own `API_BASE_URL`) instead of three times per browser._
 
 _Note: `video: 'retain-on-failure'` guarantees videos are safely discarded for passing tests, preserving local storage._
 
@@ -356,9 +375,11 @@ Path aliases enable clean imports without relative path chains:
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "commonjs",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
+    "noEmit": true,
     "baseUrl": ".",
     "paths": {
       "@fixtures/*": ["fixtures/*"],
@@ -374,9 +395,10 @@ Path aliases enable clean imports without relative path chains:
 | Option | Value | Purpose |
 |--------|-------|---------|
 | `target` | `ES2022` | Modern JS output with async/await, class fields |
-| `module` | `commonjs` | Node.js compatible module system |
+| `module` / `moduleResolution` | `ESNext` / `bundler` | ESM template; Playwright's loader resolves extensionless TS imports |
+| `noEmit` | `true` | Type checking only — Playwright compiles tests itself |
 | `strict` | `true` | Full type checking — catch nulls, anys, and edge cases |
-| `esModuleInterop` | `true` | Smooth default imports from CommonJS packages |
+| `esModuleInterop` | `true` | Smooth default imports |
 | `paths` | `@fixtures/*`, `@pages/*`, `@tests/*` | Clean imports like `@fixtures/test-base` |
 
 ---
