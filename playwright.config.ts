@@ -3,12 +3,13 @@ import type { ReporterDescription } from '@playwright/test';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { AUTH_FILE } from './tests/credentials';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Automatically parse configurations from .env
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+dotenv.config({ path: path.resolve(__dirname, '.env'), quiet: true });
 
 // On CI we emit blob reports so sharded runs can be combined afterwards
 // with `npx playwright merge-reports` (see .github/workflows/playwright.yml).
@@ -38,8 +39,9 @@ export default defineConfig({
 
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('')`. */
-    baseURL: process.env.BASE_URL || 'https://playwright.dev/',
+    /* Base URL to use in actions like `await page.goto('')`. Points at the
+       bundled demo app by default; override via .env for real targets. */
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
 
     /* Fail fast instead of hanging on CI when an element never appears. */
     actionTimeout: 15_000,
@@ -51,9 +53,17 @@ export default defineConfig({
     video: 'retain-on-failure', // Auto-recording on failure
   },
 
+  /* Local demo app (login/POM/auth examples run against it). Swap BASE_URL
+     in .env to point at your real app and this server simply goes unused. */
+  webServer: {
+    command: 'node demo-app/server.mjs',
+    url: process.env.BASE_URL || 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+  },
+
   /* Configure projects for major browsers */
   projects: [
-    /* Runs first; browser projects depend on it (e.g. for session state). */
+    /* Runs first; browser projects depend on it (saves .auth/user.json). */
     {
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
@@ -63,21 +73,30 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
-      testIgnore: '**/api/**',
+      testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'],
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
       dependencies: ['setup'],
-      testIgnore: '**/api/**',
+      testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'],
     },
 
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
       dependencies: ['setup'],
-      testIgnore: '**/api/**',
+      testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'],
+    },
+
+    /* Specs tagged *.authenticated.spec.ts boot pre-logged-in from the
+       session saved by the setup project. */
+    {
+      name: 'authenticated',
+      testMatch: /.*\.authenticated\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: AUTH_FILE },
+      dependencies: ['setup'],
     },
 
     /* API tests need no browser and should not run per-browser. */
