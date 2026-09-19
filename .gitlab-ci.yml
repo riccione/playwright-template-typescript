@@ -1,8 +1,9 @@
-image: mcr.microsoft.com/playwright:v1.52.0-noble
+image: mcr.microsoft.com/playwright:v1.61.1-noble
 
 stages:
   - quality
   - test
+  - report
 
 variables:
   CI: 'true'
@@ -12,43 +13,60 @@ cache:
     files:
       - package-lock.json
   paths:
-    - node_modules/
+    - .npm/
+
+default:
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+
+quality:
+  stage: quality
+  script:
+    - npm run lint:check
+    - npm run format:check
+    - npm run typecheck
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+      changes:
+        - '**/*.ts'
+        - '**/*.{js,mjs,cjs}'
+        - '*.json'
+        - '.gitlab-ci.yml'
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 playwright:
   stage: test
-  timeout: 60m
-  before_script:
-    - npm ci --cache .npm
-    - npx playwright install --with-deps
+  parallel: 2
   script:
-    - npx playwright test
+    - npx playwright test --shard=$CI_NODE_INDEX/$CI_NODE_TOTAL
+  artifacts:
+    when: always
+    paths:
+      - allure-results/
+      - blob-report/
+    expire_in: 30 days
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
+      changes:
+        - '**/*.ts'
+        - '**/*.{js,mjs,cjs}'
+        - '*.json'
+        - '.gitlab-ci.yml'
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+report:
+  stage: report
+  needs:
+    - playwright
+  script:
+    - npx playwright merge-reports --reporter html ./blob-report
     - npx allure generate allure-results --clean -o allure-report
   artifacts:
     when: always
     paths:
-      - reports/
-      - allure-results/
+      - playwright-report/
       - allure-report/
     expire_in: 30 days
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  except:
-    changes:
-      - '**.md'
-      - LICENSE
-
-quality:
-  stage: quality
-  before_script:
-    - npm ci --cache .npm
-  script:
-    - npm run lint:check
-    - npm run format:check
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  except:
-    changes:
-      - '**.md'
-      - LICENSE
