@@ -1,32 +1,27 @@
-import { defineConfig, devices } from '@playwright/test';
-import type { ReporterDescription } from '@playwright/test';
-import * as path from 'path';
+import { defineConfig, devices, type ReporterDescription } from '@playwright/test';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { optionalEnv, requireEnv } from './config/env';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Load .env from the repo root, next to this file.
+dotenv.config({ path: fileURLToPath(new URL('.env', import.meta.url)), quiet: true });
 
-// Automatically parse configurations from .env
-dotenv.config({ path: path.resolve(__dirname, '.env'), quiet: true });
+const isCI = !!process.env.CI;
 
 // The app under test. Failing here beats navigating to an invalid URL later.
 const baseURL = requireEnv('BASE_URL');
 
-// Only needed when you have API specs; they may also use absolute URLs.
+// Only needed when you have API specs; otherwise they must use absolute URLs.
 const apiBaseURL = optionalEnv('API_BASE_URL');
 
-// On CI we emit blob reports so sharded runs can be combined afterwards
-// with `npx playwright merge-reports` (see .github/workflows/playwright.yml).
-const reporters = () => {
-  const common: ReporterDescription[] = [
-    ['allure-playwright', { detail: true, outputFolder: 'allure-results' }],
-  ];
-  return process.env.CI
-    ? ([['blob', { outputDir: 'blob-report' }], ...common] as ReporterDescription[])
-    : ([['html', { outputFolder: 'reports', open: 'never' }], ...common] as ReporterDescription[]);
-};
+const reporter: ReporterDescription[] = [
+  ['allure-playwright', { detail: true, outputFolder: 'allure-results' }],
+  // On CI we emit blob reports so sharded runs can be combined afterwards
+  // with `npx playwright merge-reports` (see .github/workflows/playwright.yml).
+  isCI
+    ? ['blob', { outputDir: 'blob-report' }]
+    : ['html', { outputFolder: 'reports', open: 'never' }],
+];
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -36,12 +31,12 @@ export default defineConfig({
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
-  forbidOnly: !!process.env.CI,
+  forbidOnly: isCI,
   /* Retry flaky tests on CI only */
-  retries: process.env.CI ? 2 : 0,
+  retries: isCI ? 2 : 0,
   /* Half the CPUs on CI, full parallelism locally */
-  workers: process.env.CI ? '50%' : undefined,
-  reporter: reporters(),
+  workers: isCI ? '50%' : undefined,
+  reporter,
 
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
@@ -86,25 +81,5 @@ export default defineConfig({
         baseURL: apiBaseURL,
       },
     },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
   ],
 });
