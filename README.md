@@ -1,496 +1,291 @@
-# Playwright TypeScript Test Automation Framework
+# Playwright + TypeScript E2E Template
 
-A modern, highly optimized End-to-End (E2E) UI testing template using TypeScript,
-`@playwright/test`, and native package ecosystem compilation engines for lightning-fast automation pipelines.
+A starting point for end-to-end tests with [Playwright](https://playwright.dev) and TypeScript:
+typed page objects, shared fixtures, quality gates, three CI blueprints, and HTML + Allure
+reporting. There is no demo app and no example suite — point it at your app and write tests.
 
-This framework implements a decoupled Page Object Model (POM) architecture,
-cross-browser support, test lifecycle tracking, linting quality gates, and dual-reporting capability
-(Playwright HTML & Allure 3) featuring automated screenshot and video capture upon
-test failures.
+## What you get
 
----
+- **ESM + strict TypeScript** with path aliases (`@pages`, `@fixtures`, `@tests`, `@config`)
+- **Project matrix**: `chromium`, `firefox`, `webkit` and a browserless `api` project
+- **Quality gates**: ESLint (incl. `eslint-plugin-playwright`), Prettier, `tsc --noEmit`, pre-commit hooks
+- **CI blueprints**: GitHub Actions (2 shards, merged reports), GitLab CI, Jenkins
+- **Reports**: Playwright HTML locally, Allure 3 results, blob reports for CI sharding
+- **Containerized runs**: Dockerfile + Compose, with a `.dockerignore` that keeps secrets out
 
-## Features
+## Requirements
 
-- **Strict Type Safety**: Full TypeScript integration guarantees compile-time check validation across selectors, fixtures, and workflows.
-- **Page Object Model (POM)**: Fully decoupled architecture separating page selectors from business workflows.
-- **Configuration Management**: Centralized environment parsing via custom configurations or standard process bindings to eliminate hardcoded secrets.
-- **Code Quality & Enforcement**: Built-in automated linting and formatting via `eslint` and `prettier` backed by `pre-commit` git hooks.
-- **Dynamic Dual Reporting**: Built-in compatibility for choosing lightweight native `playwright-html` tracking or fully enterprise-grade `Allure 3` visual dashboards.
-- **Rich Failure Artifacts**: Automated hook interception captures full-page browser screenshots and saves screen recordings explicitly on test failure conditions.
-- **Universal CI/CD Ready**: Native multi-platform workflow blueprints provided out-of-the-box for GitHub Actions, GitLab CI, and Jenkins.
-- **Containerized Execution**: Docker and Docker Compose support for reproducible test runs across any environment.
+- Node.js `>= 22` (`.nvmrc` pins the version used by CI)
+- Playwright browsers: `npx playwright install --with-deps`
 
----
+## First 10 minutes with your app
 
-## Directory Structure
-
-```text
-├── .github/workflows/playwright.yml # GitHub Actions pipeline blueprint
-├── .gitlab-ci.yml           # GitLab CI orchestration blueprint
-├── Jenkinsfile              # Jenkins Declarative pipeline engine script
-├── .env.example             # Safe template for configuration variables
-├── .nvmrc                   # Pinned Node version for nvm/CI parity
-├── .pre-commit-config.yaml  # Local quality gates on commit
-├── Dockerfile               # Containerized test runner image
-├── docker-compose.yml       # Docker Compose orchestration for local runs
-├── playwright.config.ts     # Projects, reporters, webServer, timeouts
-├── tsconfig.json            # ESM + path aliases (@pages, @fixtures, @tests)
-├── package.json             # Scripts and exact-pinned dependencies
-├── demo-app/                # Local server the examples run against (offline)
-│   ├── server.mjs           # Zero-dep HTTP server: /login, /me, /logout
-│   ├── login.html           # Semantic sign-in form (labels, role=alert)
-│   └── dashboard.html       # Session-aware page (renders "Welcome"/"Not signed in")
-├── fixtures/
-│   └── test-base.ts         # Extends base `test` with page-object fixtures
-├── pages/
-│   ├── login.page.ts        # LoginPage POM: public accessibility locators
-│   └── dashboard.page.ts    # DashboardPage POM
-└── tests/
-    ├── auth.setup.ts        # Setup project: logs in once, saves storageState
-    ├── credentials.ts       # Shared auth file path + credential resolution
-    ├── api/                 # request-fixture tests (own `api` project)
-    │   └── example.spec.ts
-    └── ui/
-        ├── example.spec.ts               # Plain `page` intro examples
-        ├── login.spec.ts                 # POM workflow (@smoke / @regression)
-        └── dashboard.authenticated.spec.ts # Pre-logged-in via storageState
-```
-
----
-
-## Prerequisites & Installation
-
-### 1. Initialize Your Environment
-
-Make sure you have Node.js and Python 3 installed. Then, set up pre-commit, fetch dependencies, and configure development tooling:
+**1. Install**
 
 ```bash
-# Install pre-commit using uv (recommended)
-uv tool install pre-commit
-# or using pip in a virtual environment:
-# python3 -m venv .venv && source .venv/bin/activate
-# pip install pre-commit
-
-# Clean install package specifications out of package.json
-npm install
-
-# Install native Playwright system browser binaries
+npm ci
 npx playwright install --with-deps
-
-# Install pre-commit git hooks (runs automatically on npm install)
-npm run prepare
-
+npm run prepare        # installs the pre-commit hooks (needs pre-commit on PATH)
 ```
 
-### 2. Environment Configurations Setup
-
-The framework leverages automated `.env` loading. Create your local context tracking files before launching scripts:
+**2. Point it at your app**
 
 ```bash
 cp .env.example .env
-
 ```
-
-Open your newly created `.env` file and customize your workspace targets securely:
 
 ```ini
-BASE_URL=http://localhost:3000
-API_BASE_URL=https://jsonplaceholder.typicode.com
-# Optional: demo app credentials. Leave unset to use demo_admin/demo_password.
-ADMIN_USER=
-ADMIN_PASSWORD=
-
+# .env
+BASE_URL=https://your-app.example.com
+API_BASE_URL=https://your-api.example.com   # only if you have API specs
+ADMIN_USER=you@example.com                  # only if you add a login flow
+ADMIN_PASSWORD=...
 ```
 
-Out of the box the suite runs entirely against the bundled `demo-app/`
-(started automatically via `webServer`), so no `.env` is even required for a
-first green run. Point `BASE_URL` at your own app once you swap the examples
-out — just keep the demo server config in `playwright.config.ts` or delete it.
+`BASE_URL` is required — without it the config fails immediately with that message instead of
+a cryptic navigation error.
 
-### 3. (Optional) Allure 3 Dashboard Engine
+**3. Add a page object** in `pages/`:
 
-To spin up interactive Allure reporting, your host machine requires the Allure command-line utility binary. [https://allurereport.org/docs/v3/install/](https://allurereport.org/docs/v3/install/)
+```typescript
+// pages/login.page.ts
+import { Page, Locator } from '@playwright/test';
 
-```bash
-npm install -g allure
+export class LoginPage {
+  readonly usernameInput: Locator;
+  readonly passwordInput: Locator;
+  readonly loginButton: Locator;
 
+  constructor(page: Page) {
+    this.usernameInput = page.getByLabel('Email');
+    this.passwordInput = page.getByLabel('Password');
+    this.loginButton = page.getByRole('button', { name: 'Sign in' });
+  }
+
+  async login(email: string, password: string): Promise<void> {
+    await this.usernameInput.fill(email);
+    await this.passwordInput.fill(password);
+    await this.loginButton.click();
+  }
+}
 ```
 
----
+**4. Hand it to your specs** as a fixture in `fixtures/test-base.ts`:
 
-## Run Tests & Generate Reports
+```typescript
+import { test as base } from '@playwright/test';
+import { LoginPage } from '@pages/login.page';
 
-The suite is designed to change its reporting layout dynamically depending on the execution parameters passed down through the terminal command:
+type Fixtures = {
+  loginPage: LoginPage;
+};
 
-### Quick Start with npm Scripts
+export const test = base.extend<Fixtures>({
+  loginPage: async ({ page }, use) => {
+    await use(new LoginPage(page));
+  },
+});
 
-```bash
-# Run all tests
-npm test
-
-# Run tests in specific browser
-npm run test:chromium
-npm run test:firefox
-npm run test:webkit
-
-# Run API (headless, no browser) tests
-npm run test:api
-
-# Run tagged subsets
-npm run test:smoke       # --grep @smoke
-npm run test:regression  # --grep @regression
-
-# Open Playwright UI Mode for interactive testing
-npm run test:ui
-
-# Run tests in headed mode (visible browser)
-npm run test:headed
-
-# Debug tests with Playwright Inspector
-npm run test:debug
-
-# View the HTML report
-npm run test:report
-
-# Static type check (also runs in CI and pre-commit)
-npm run typecheck
+export { expect } from '@playwright/test';
 ```
 
-### Writing Tests
-
-All tests should import `test` and `expect` from `@fixtures/test-base` to get the page-object fixtures:
+**5. Write a test** in `tests/ui/` (replace `tests/ui/first.spec.ts`):
 
 ```typescript
 import { test, expect } from '@fixtures/test-base';
 
-test('invalid login shows error banner @regression', async ({ loginPage }) => {
-  await loginPage.goto();
-  await loginPage.login('user', 'wrong-password');
+test('user can sign in @smoke', async ({ loginPage, page }) => {
+  await page.goto('/login');
+  await loginPage.login('you@example.com', 'secret');
 
-  await expect(loginPage.alert).toHaveText('Invalid credentials');
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 });
 ```
 
-Page objects expose their locators publicly so assertions stay web-first
-(auto-retrying) — `expect(loginPage.alert).toHaveText(...)`, never
-`expect(await loginPage.getText()).toContain(...)`.
+**6. Run it**
 
-### Authentication / Sessions
+```bash
+npm test                 # all projects
+npm run test:chromium    # one browser
+npm run test:smoke       # only @smoke-tagged specs
+npm run test:headed      # watch it happen
+npm run test:ui          # Playwright UI mode
+```
 
-Logging in once is handled by the `setup` project (`tests/auth.setup.ts`),
-which stores the session in `.auth/user.json`. Specs named
-`*.authenticated.spec.ts` run in the `authenticated` project and boot
-pre-logged-in via `storageState` — no login step, no re-auth per test:
+## Project layout
+
+```text
+├── .github/workflows/playwright.yml # GitHub Actions: quality -> test(2 shards) -> report
+├── .gitlab-ci.yml           # GitLab CI blueprint
+├── Jenkinsfile              # Jenkins Declarative pipeline
+├── .dockerignore           # keeps .env and artifacts out of the image
+├── .env.example             # copy to .env and fill in
+├── .nvmrc                   # pinned Node version
+├── .pre-commit-config.yaml  # prettier + eslint + tsc on every commit
+├── config/env.ts            # requireEnv/optionalEnv: fail fast on missing config
+├── fixtures/test-base.ts    # register your page objects here
+├── pages/                   # your page objects (POM)
+├── tests/
+│   ├── api/                 # request-fixture specs (own `api` project)
+│   └── ui/                  # browser specs
+├── eslint.config.mjs
+├── playwright.config.ts     # projects, reporters, timeouts
+└── tsconfig.json            # ESM + path aliases
+```
+
+## Conventions
+
+- **Locators**: `getByRole()`, `getByLabel()`, `getByText()` — no CSS classes, no XPath.
+  Keep them on the page object and expose them publicly.
+- **Assertions**: web-first, always awaited — `await expect(locator).toBeVisible()`. Never
+  `waitForTimeout`, never `expect(await something()).toContain(...)`.
+- **Navigation**: the spec navigates (`await page.goto('/login')`). There is no auto-navigating
+  `page` fixture — hidden setup makes failures hard to read.
+- **Tags**: `@smoke` / `@regression` in the test title drive `npm run test:smoke` / `test:regression`.
+- **No `console.log`**: ESLint rejects it. Use the test title for context.
+- **Credentials**: never in code or fixtures — read them from the environment.
+
+## Adding authentication (log in once, reuse the session)
+
+Copy these two pieces into your project; they are not shipped because the login flow is
+app-specific.
+
+**`tests/auth.setup.ts`** — a setup project logs in once and saves the session:
 
 ```typescript
-// tests/ui/dashboard.authenticated.spec.ts
-test('saved session opens the dashboard', async ({ dashboardPage }) => {
-  await dashboardPage.goto(); // already signed in
-  await expect(dashboardPage.status).toHaveText(/Welcome, /);
+import { mkdirSync } from 'fs';
+import { test as setup, expect } from '@playwright/test';
+import { LoginPage } from '@pages/login.page';
+import { requireEnv } from '@config/env';
+
+const AUTH_FILE = '.auth/user.json';
+
+setup('authenticate', async ({ page }) => {
+  mkdirSync('.auth', { recursive: true });
+
+  const loginPage = new LoginPage(page);
+  await loginPage.goto();
+  await loginPage.login(requireEnv('ADMIN_USER'), requireEnv('ADMIN_PASSWORD'));
+
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+
+  await page.context().storageState({ path: AUTH_FILE });
 });
 ```
 
-### API Testing
+**`playwright.config.ts`** — add a `setup` project plus an `authenticated` project that boots
+pre-logged-in:
 
-Playwright's built-in `request` fixture enables HTTP API testing without a browser. API tests live in `tests/api/` and run in the dedicated `api` project (own `API_BASE_URL`, zero browsers, once instead of per-browser):
+```typescript
+projects: [
+  { name: 'setup', testMatch: /auth\.setup\.ts/ },
+  {
+    name: 'chromium',
+    use: { ...devices['Desktop Chrome'] },
+    dependencies: ['setup'],
+    testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'],
+  },
+  {
+    name: 'authenticated',
+    testMatch: /.*\.authenticated\.spec\.ts/,
+    use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    dependencies: ['setup'],
+  },
+]
+```
+
+Specs named `*.authenticated.spec.ts` then start already signed in — no login step, no
+re-authentication per test. `.auth/` is already in `.gitignore`; never commit the session file.
+
+## API testing
+
+API specs live in `tests/api/` and run in the browserless `api` project (once, not per browser):
 
 ```typescript
 import { test, expect } from '@playwright/test';
 
-test('GET request', async ({ request }) => {
-  const response = await request.get('/users');
-  expect(response.status()).toBe(200);
+test('lists users', async ({ request }) => {
+  const response = await request.get('/users'); // relative to API_BASE_URL
 
-  const body = await response.json();
-  expect(Array.isArray(body)).toBeTruthy();
+  expect(response.ok()).toBeTruthy();
+  expect(await response.json()).toHaveLength(3);
 });
 ```
 
-Available request methods: `get`, `post`, `put`, `patch`, `delete`, `head`, `fetch`.
+Set `API_BASE_URL` (local `.env`, CI secret/variable) or use absolute URLs in the spec.
+
+## npm scripts
+
+| Script | What it does |
+|---|---|
+| `npm test` | Run every project |
+| `npm run test:chromium` / `:firefox` / `:webkit` | One browser |
+| `npm run test:api` | API project only |
+| `npm run test:smoke` / `test:regression` | Tag-filtered runs |
+| `npm run test:ui` / `test:headed` / `test:debug` | UI mode, visible browser, inspector |
+| `npm run test:report` | Open the last HTML report |
+| `npm run test:docker` | Run the suite in Docker |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint:check` / `lint:fix` | ESLint |
+| `npm run format` / `format:check` | Prettier |
+
+## CI/CD
+
+Every pipeline needs the app URL. Provide it as a secret/variable — the config requires it:
+
+| Platform | Where to define it |
+|---|---|
+| GitHub Actions | Repository secrets `BASE_URL` (required) and `API_BASE_URL` (optional) |
+| GitLab CI | Project CI/CD variables `BASE_URL`, `API_BASE_URL` |
+| Jenkins | Global environment variables or pipeline parameters |
+
+GitHub Actions runs three jobs:
+
+1. `quality` — lint, format check, typecheck
+2. `test` — the suite split into 2 shards, each uploading blob + Allure results
+3. `report` — merges the shards into one HTML report and generates the Allure dashboard
+
+Artifacts: `playwright-report` and `allure-report` (30 days). Locally, the HTML report lands in
+`reports/` and the Allure results in `allure-results/`.
+
+## Docker
 
 ```bash
-# Run only API tests
-npm run test:api
-```
-
-### Choice A: Generate Lightweight Playwright HTML Reports
-
-Creates a self-contained, lightweight `.html` build report folder with embedded trace files, logs, and failure videos.
-
-```bash
-npx playwright test --reporter=html
-
-```
-
-### Choice B: Generate Advanced Allure 3 Interactive Dashboards
-
-Compiles a graphical dashboard detailing timelines, error trace breakdowns, nested failures, expandable screenshots, and interactive inline streaming `.webm` videos.
-
-```bash
-# 1. Run the test suite to harvest raw metadata
-npx playwright test --reporter=line,allure-playwright
-
-# 2. Compile metrics and launch a localized browser viewer server
-allure serve allure-results
-
-```
-
----
-
-## Docker Execution
-
-Run tests in a fully isolated container with pre-installed browsers and system dependencies.
-
-### Prerequisites
-
-Install Docker and Docker Compose on your machine.
-
-### Build and Run
-
-```bash
-# Build the image and run tests
-docker compose up --build
-
-# Run tests with a specific npm script
+npm run test:docker                       # build and run the whole suite
 docker compose run --rm playwright npx playwright test --headed
-
-# Run tests in UI mode (requires X11 forwarding on Linux)
-docker compose run --rm playwright npx playwright test --ui
-
-# View the HTML report (generated in reports/)
-open reports/index.html
 ```
 
-The container uses `mcr.microsoft.com/playwright` as its base image, which ships with Chromium, Firefox, and WebKit — no manual browser installs needed.
+The image tag (`mcr.microsoft.com/playwright:v1.61.1-noble`) is kept in lockstep with the
+exact `@playwright/test` version in `package.json` — bump both together. `.env` is passed to
+the container through Compose, and `.dockerignore` keeps it out of the image itself.
 
----
-
-## Code Quality & Formatting
-
-The project enforces consistent code style using ESLint for linting and Prettier for formatting. These checks run automatically in CI and block merges on violations.
-
-### Linting
+## Quality gates
 
 ```bash
-# Check for lint errors
+npm run typecheck
 npm run lint:check
-
-# Auto-fix lint errors
-npm run lint:fix
-```
-
-### Formatting
-
-```bash
-# Check formatting (read-only, fails if unformatted)
 npm run format:check
-
-# Auto-format all files
-npm run format
 ```
 
-### What Gets Checked
-
-| Tool | Files | Exclusions |
-|------|-------|------------|
-| ESLint | `*.ts`, `*.js`, `*.mjs`, `*.cjs` | `*.md` |
-| Prettier | `*.ts`, `*.js`, `*.mjs`, `*.cjs`, `*.json`, `*.yml`, `*.yaml` | `*.md`, `package-lock.json`, generated dirs |
-
-### Pre-commit Hooks
-
-Pre-commit runs ESLint and Prettier automatically on every `git commit`. Hooks are installed via the `prepare` script after `npm install`:
+The same three run in CI and in the pre-commit hooks:
 
 ```bash
-# Install hooks (already runs on npm install)
-pre-commit install
-
-# Manually run hooks against all files
+npm run prepare          # install hooks (pre-commit must be on PATH)
 pre-commit run --all-files
-
-# Skip hooks on a specific commit (use with caution)
-git commit --no-verify
 ```
 
----
-
-## Useful Playwright Command Line Flags
-
-When executing `npx playwright test`, you can append these optional flags to control output verbosity, configuration targets, or debugging parameters:
-
-### 1. Visual Debugging & Local Execution Controls
-
-- `--headed`: **Disables headless mode.** Launches physical, visible browser windows on your monitor so you can watch the test execution, clicks, and transitions happen live.
-- `--slow-mo <ms>`: **Introduces action delays.** Slows down all automated browser actions (clicks, inputs, navigations) by a set duration in milliseconds. Great for tracing fast visual flows (e.g., `npx playwright test --headed --slow-mo=500`).
-- `--debug`: **Launches Playwright Inspector.** Opens a browser window along with the step-by-step debugger tool, allowing you to step through your script line-by-line.
-
-### 2. Output & Configuration Controls
-
-- `--project=<name>`: **Filter by browser target.** Runs your tests only against a specific browser configuration defined in your config (e.g., `--project=chromium` or `--project=firefox`).
-- `--ui`: **Launches Playwright UI Mode.** Opens an interactive graphical interface to explore, run, view snapshots, and trace individual test steps locally.
-- `--trace on-first-retry`: **Record execution traces.** Generates a complete diagnostic recording (with video, network timelines, and DOM snapshots) if a test fails on its first attempt.
-
-### 3. Execution Control & Diagnostics
-
-- `--max-failures=1` (or `-x`): **Stop on first failure.** Instantly terminates the entire test suite execution the moment a single test fails. Ideal for continuous integration pipelines.
-- `--last-failed`: **Run only failures.** Reads execution history and re-runs only the specific tests that failed during the previous local run session.
-- `-g "expression"`: **Filter by test name.** Runs tests whose titles match a keyword filter string (e.g., `npx playwright test -g "login"` runs only login-related tests).
-
-### 4. Parallelization & Scaling
-
-- `--workers=<num>`: **Multi-threaded execution.** Spreads tests concurrently across local machine CPU worker threads:
+## Reports
 
 ```bash
-# Force a custom thread speed layout limit or let Playwright optimize automatically
-npx playwright test --workers=50%
+npm test                                  # writes reports/ (HTML) and allure-results/
+npm run test:report                       # opens the HTML report
 
+npx allure generate allure-results --clean -o allure-report
+npx allure serve allure-results           # interactive dashboard
 ```
 
----
-
-## Configuration Details (`playwright.config.ts`)
-
-Global default parameters reside directly inside `playwright.config.ts` to enforce strict folder mappings, retry capabilities, execution limits, and dictate browser video retention logic:
-
-```typescript
-import { defineConfig, devices } from '@playwright/test';
-
-export default defineConfig({
-  testDir: './tests',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? '50%' : undefined,
-
-  // Locally: html + allure. On CI: blob + allure, so shards are merged
-  // back into one report by the pipeline (see .github/workflows).
-  reporter: /* ... */,
-
-  use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    actionTimeout: 15_000,
-    navigationTimeout: 15_000,
-    trace: 'on-first-retry',
-    video: 'retain-on-failure',
-    screenshot: 'only-on-failure',
-  },
-
-  projects: [
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, dependencies: ['setup'], testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'] },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, dependencies: ['setup'], testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'] },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] }, dependencies: ['setup'], testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'] },
-    { name: 'authenticated', testMatch: /.*\.authenticated\.spec\.ts/, use: { ...devices['Desktop Chrome'], storageState: AUTH_FILE }, dependencies: ['setup'] },
-    { name: 'api', testDir: './tests/api', use: { baseURL: process.env.API_BASE_URL } },
-  ],
-});
-```
-
-_Browser projects depend on the `setup` project and ignore `tests/api/`;
-`*.authenticated.spec.ts` files run pre-logged-in via `storageState`; API tests
-run exactly once (no browser, own `API_BASE_URL`) instead of per-browser._
-
-_Note: `video: 'retain-on-failure'` guarantees videos are safely discarded for passing tests, preserving local storage._
-
----
-
-## TypeScript Configuration (`tsconfig.json`)
-
-Path aliases enable clean imports without relative path chains:
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "esModuleInterop": true,
-    "noEmit": true,
-    "baseUrl": ".",
-    "paths": {
-      "@fixtures/*": ["fixtures/*"],
-      "@pages/*": ["pages/*"],
-      "@tests/*": ["tests/*"]
-    }
-  },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "allure-results", "allure-report", "reports", "test-results"]
-}
-```
-
-| Option | Value | Purpose |
-|--------|-------|---------|
-| `target` | `ES2022` | Modern JS output with async/await, class fields |
-| `module` / `moduleResolution` | `ESNext` / `bundler` | ESM template; Playwright's loader resolves extensionless TS imports |
-| `noEmit` | `true` | Type checking only — Playwright compiles tests itself |
-| `strict` | `true` | Full type checking — catch nulls, anys, and edge cases |
-| `esModuleInterop` | `true` | Smooth default imports |
-| `paths` | `@fixtures/*`, `@pages/*`, `@tests/*` | Clean imports like `@fixtures/test-base` |
-
----
-
-## Handling Intentional Failures & WIP Tests
-
-To keep the continuous integration (CI) pipeline green while tracking unfinished features or known application bugs, use Playwright’s native test annotations:
-
-### 1. Mark as an Expected Failure (`test.fail()`)
-
-The cleanest engineering practice for tracking known open bugs. It instructs Playwright to expect a failure:
-
-- If the test **fails**, the CI pipeline stays **Green (Passing)**.
-- If the bug gets fixed and the test suddenly **passes**, Playwright flags it as a failure so you know to remove the annotation.
-
-```typescript
-test('verify broken mobile submit action', async ({ page }) => {
-  test.fail(true, 'app bug #123 — flip to false once fixed');
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Log In' }).click(); // fails as expected; CI stays green
-});
-```
-
-### 2. Skip a Single Test Completely
-
-Bypasses a test block entirely during execution, marking it cleanly as `Skipped` in your execution dashboards:
-
-```typescript
-test.skip('verify unfinished dashboard widget', async ({ page }) => {
-  await page.goto('/dashboard');
-});
-```
-
-### 3. Focus on a Single Test (`test.only`)
-
-During local debugging, isolate an individual test. Playwright will completely bypass every other file and spec block in your repository except this one:
-
-```typescript
-test.only('debug this specific selector flow', async ({ page }) => {
-  // Only this test executes locally
-});
-```
-
----
-
-## Git Best Practices & Untracked Files
-
-The following local runtime artifacts, secrets, and environment managers generated during execution must remain completely untracked. Ensure your local `.gitignore` configuration matches the framework blueprint:
-
-```text
-.env
-*.env
-test-results/
-allure-results/
-allure-report/
-playwright-report/
-blob-report/
-node_modules/
-dist/
-.eslintcache
-
-```
-
----
+The Allure CLI comes from the `allure-commandline` dev dependency (no global install needed).
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
