@@ -3,6 +3,9 @@ pipeline {
 
     environment {
         CI = 'true'
+        // BASE_URL (required) and API_BASE_URL (only for API specs) must be
+        // defined as global environment variables or pipeline parameters;
+        // Jenkins exports them to every step.
         PLAYWRIGHT_BROWSERS_PATH = "${WORKSPACE}/.playwright-cache"
         NPM_CONFIG_CACHE = "${WORKSPACE}/.npm-cache"
     }
