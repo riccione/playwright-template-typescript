@@ -36,12 +36,18 @@ export default defineConfig({
   retries: isCI ? 2 : 0,
   /* Half the CPUs on CI, full parallelism locally */
   workers: isCI ? '50%' : undefined,
+  /* Real flows (checkout, uploads) need more than Playwright's 30s default. */
+  timeout: 60_000,
   reporter,
 
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
     baseURL,
+
+    /* Pin locale and time so date/number assertions do not depend on the runner. */
+    locale: 'en-US',
+    timezoneId: 'UTC',
 
     /* Fail fast instead of hanging on CI when an element never appears. */
     actionTimeout: 15_000,
