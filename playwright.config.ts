@@ -3,13 +3,19 @@ import type { ReporterDescription } from '@playwright/test';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { AUTH_FILE } from './tests/credentials';
+import { optionalEnv, requireEnv } from './config/env';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Automatically parse configurations from .env
 dotenv.config({ path: path.resolve(__dirname, '.env'), quiet: true });
+
+// The app under test. Failing here beats navigating to an invalid URL later.
+const baseURL = requireEnv('BASE_URL');
+
+// Only needed when you have API specs; they may also use absolute URLs.
+const apiBaseURL = optionalEnv('API_BASE_URL');
 
 // On CI we emit blob reports so sharded runs can be combined afterwards
 // with `npx playwright merge-reports` (see .github/workflows/playwright.yml).
@@ -39,9 +45,8 @@ export default defineConfig({
 
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('')`. Points at the
-       bundled demo app by default; override via .env for real targets. */
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    /* Base URL to use in actions like `await page.goto('')`. */
+    baseURL,
 
     /* Fail fast instead of hanging on CI when an element never appears. */
     actionTimeout: 15_000,
@@ -53,50 +58,24 @@ export default defineConfig({
     video: 'retain-on-failure', // Auto-recording on failure
   },
 
-  /* Local demo app (login/POM/auth examples run against it). Swap BASE_URL
-     in .env to point at your real app and this server simply goes unused. */
-  webServer: {
-    command: 'node demo-app/server.mjs',
-    url: process.env.BASE_URL || 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-  },
-
   /* Configure projects for major browsers */
   projects: [
-    /* Runs first; browser projects depend on it (saves .auth/user.json). */
-    {
-      name: 'setup',
-      testMatch: /auth\.setup\.ts/,
-    },
-
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup'],
-      testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'],
+      testIgnore: '**/api/**',
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      dependencies: ['setup'],
-      testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'],
+      testIgnore: '**/api/**',
     },
 
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-      dependencies: ['setup'],
-      testIgnore: ['**/api/**', '**/*.authenticated.spec.ts'],
-    },
-
-    /* Specs tagged *.authenticated.spec.ts boot pre-logged-in from the
-       session saved by the setup project. */
-    {
-      name: 'authenticated',
-      testMatch: /.*\.authenticated\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'], storageState: AUTH_FILE },
-      dependencies: ['setup'],
+      testIgnore: '**/api/**',
     },
 
     /* API tests need no browser and should not run per-browser. */
@@ -104,7 +83,7 @@ export default defineConfig({
       name: 'api',
       testDir: './tests/api',
       use: {
-        baseURL: process.env.API_BASE_URL || 'https://jsonplaceholder.typicode.com',
+        baseURL: apiBaseURL,
       },
     },
 
@@ -112,24 +91,20 @@ export default defineConfig({
     // {
     //   name: 'Mobile Chrome',
     //   use: { ...devices['Pixel 5'] },
-    //   dependencies: ['setup'],
     // },
     // {
     //   name: 'Mobile Safari',
     //   use: { ...devices['iPhone 12'] },
-    //   dependencies: ['setup'],
     // },
 
     /* Test against branded browsers. */
     // {
     //   name: 'Microsoft Edge',
     //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    //   dependencies: ['setup'],
     // },
     // {
     //   name: 'Google Chrome',
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    //   dependencies: ['setup'],
     // },
   ],
 });
