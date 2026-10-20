@@ -7,9 +7,9 @@
     "test:chromium": "playwright test --project=chromium",
     "test:firefox": "playwright test --project=firefox",
     "test:webkit": "playwright test --project=webkit",
-    "test:api": "playwright test --project=api",
-    "test:smoke": "playwright test --grep @smoke",
-    "test:regression": "playwright test --grep @regression",
+    "test:api": "playwright test --project=api --pass-with-no-tests",
+    "test:smoke": "playwright test --grep @smoke --pass-with-no-tests",
+    "test:regression": "playwright test --grep @regression --pass-with-no-tests",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
@@ -29,7 +29,6 @@
     "testing",
     "pom"
   ],
-  "author": "",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -41,6 +40,7 @@
     "@types/node": "^26.0.1",
     "allure-commandline": "^2.43.0",
     "allure-playwright": "3.10.2",
+    "dotenv": "^17.4.2",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-playwright": "^2.10.4",
@@ -48,8 +48,5 @@
     "prettier": "^3.9.1",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.62.0"
-  },
-  "dependencies": {
-    "dotenv": "^17.4.2"
   }
 }

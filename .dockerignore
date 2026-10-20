@@ -1,0 +1,16 @@
+# Keep local secrets and build artifacts out of the image.
+# `COPY . .` would otherwise bake .env (and any saved session) into a layer.
+node_modules
+.git
+.env
+.env.*
+!.env.example
+.auth
+reports
+allure-results
+allure-report
+playwright-report
+blob-report
+test-results
+dist
+*.log

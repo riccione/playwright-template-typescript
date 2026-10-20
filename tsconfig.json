@@ -11,6 +11,7 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
+      "@config/*": ["config/*"],
       "@fixtures/*": ["fixtures/*"],
       "@pages/*": ["pages/*"],
       "@tests/*": ["tests/*"]

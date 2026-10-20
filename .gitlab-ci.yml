@@ -7,6 +7,9 @@ stages:
 
 variables:
   CI: 'true'
+  # BASE_URL (required) and API_BASE_URL (only for API specs) must be defined
+  # as CI/CD variables in your project settings; GitLab exports them to jobs
+  # automatically.
 
 cache:
   key:
