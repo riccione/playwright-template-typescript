@@ -62,31 +62,11 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-      testIgnore: '**/api/**',
-    },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-      testIgnore: '**/api/**',
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-      testIgnore: '**/api/**',
-    },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: '**/api/**' },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testIgnore: '**/api/**' },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: '**/api/**' },
 
     /* API tests need no browser and should not run per-browser. */
-    {
-      name: 'api',
-      testDir: './tests/api',
-      use: {
-        baseURL: apiBaseURL,
-      },
-    },
+    { name: 'api', testDir: './tests/api', use: { baseURL: apiBaseURL } },
   ],
 });
