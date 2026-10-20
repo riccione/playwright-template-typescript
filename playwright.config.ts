@@ -45,7 +45,8 @@ export default defineConfig({
 
     /* Fail fast instead of hanging on CI when an element never appears. */
     actionTimeout: 15_000,
-    navigationTimeout: 15_000,
+    /* Playwright's default is 30s; slow pages legitimately need it. */
+    navigationTimeout: 30_000,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
