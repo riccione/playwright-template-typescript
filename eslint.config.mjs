@@ -21,15 +21,6 @@ export default tseslint.config(
     files: ['tests/**/*.ts', 'fixtures/**/*.ts'],
   },
   {
-    // Setup files bootstrap state (env checks, login); they legitimately
-    // contain conditionals and need no web-first assertions.
-    files: ['tests/**/*.setup.ts'],
-    rules: {
-      'playwright/expect-expect': 'off',
-      'playwright/no-conditional-in-test': 'off',
-    },
-  },
-  {
     // Debug leftovers should not survive a commit; warn/error are fine
     // (they end up in report attachments).
     files: ['**/*.ts'],
